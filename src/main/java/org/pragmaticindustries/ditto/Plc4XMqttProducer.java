@@ -55,11 +55,11 @@ public class Plc4XMqttProducer {
         System.out.println("Create Feature " + featureName);
         client.createFeature(namespace, thingId, featureName);
 
-        // Now add one property for each channel
-        for (Map.Entry<String, String> entry : channels.entrySet()) {
-            System.out.println("Add Property " + entry.getKey());
-            client.modifyFeature(namespace, thingId, featureName, entry.getKey(), "0.0");
-        }
+//        // Now add one property for each channel
+//        for (Map.Entry<String, String> entry : channels.entrySet()) {
+//            System.out.println("Add Property " + entry.getKey());
+//            client.modifyFeature(namespace, thingId, featureName, entry.getKey(), "0.0");
+//        }
 
         // Output the feature once
         System.out.println("Fetch complete Thing:");

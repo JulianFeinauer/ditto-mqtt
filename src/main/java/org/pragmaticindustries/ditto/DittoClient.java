@@ -128,7 +128,7 @@ public class DittoClient implements AutoCloseable {
             // Merge map
             final String map = IntStream.range(0, properties.size())
                 .mapToObj(i -> {
-                    return String.format("\"%s\": %s", properties.get(i), vals.get(i));
+                    return String.format("\"%s\": %s", properties.get(i), normalize(vals.get(i)));
                 })
                 .collect(Collectors.joining(",\n"));
 
@@ -262,6 +262,18 @@ public class DittoClient implements AutoCloseable {
                 .addTopicFilter("ditto/replies/" + correlationId)
                 .send();
         }
+    }
+
+    private static String normalize(Object v) {
+        if (v instanceof String) {
+            return "\"" + v + "\"";
+//            if ("true".equals(v)) {
+//                return "1";
+//            } else {
+//                return "0";
+//            }
+        }
+        return v.toString();
     }
 
     @Override

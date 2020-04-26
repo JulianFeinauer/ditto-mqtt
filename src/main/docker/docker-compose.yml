@@ -3,14 +3,14 @@ version: "3"
 services:
 
   ditto-mqtt-bridge:
-    image: mqtt-bridge
+    image: jfeinauer/mqtt-to-iotdb-bridge:1.0.0-SNAPSHOT
     volumes:
       - "./config.json:/opt/service/config.json"
     depends_on:
       - iotdb
 
   plc4x-producer:
-    image: plc4x-producer
+    image: jfeinauer/plc4x-to-ditto-producer:1.0.0-SNAPSHOT
     volumes:
       - "./config.json:/opt/service/config.json"
 
@@ -24,11 +24,6 @@ services:
       - "6667:6667"
       - "31999:31999"
       - "8181:8181"
-
-  iotdb2:
-    image: apache/iotdb:0.9.1-jre8
-    depends_on:
-      - iotdb
 
   iotdb-grafana:
     image: jfeinauer/iotdb-grafana:0.9.1

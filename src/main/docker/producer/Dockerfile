@@ -4,8 +4,6 @@ MAINTAINER Julian
 CMD mkdir -p /opt/service
 COPY maven/*.jar /opt/service/
 
-COPY config.json /opt/service/
-
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-cp", "/opt/service/*", "org.pragmaticindustries.ditto.Plc4XMqttProducer"]
