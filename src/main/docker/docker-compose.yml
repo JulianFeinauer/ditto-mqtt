@@ -16,10 +16,36 @@ services:
 
   iotdb:
     image: apache/iotdb:0.9.1-jre8
+    expose:
+      - "6667"
+      - "31999"
+      - "8181"
     ports:
-    - "6667:6667"
-    - "31999:31999"
-    - "8181:8181"
+      - "6667:6667"
+      - "31999:31999"
+      - "8181:8181"
 
-  # TODO Add IoTDB Grafana Adapter
-  # TODO Add Custom Grafana
+  iotdb2:
+    image: apache/iotdb:0.9.1-jre8
+    depends_on:
+      - iotdb
+
+  iotdb-grafana:
+    image: jfeinauer/iotdb-grafana:0.9.1
+    ports:
+      - "8888:8888"
+      - "4000:4000"
+    environment:
+      IOTDB_HOST: iotdb
+      IOTDB_PORT: 6667
+      IOTDB_USER: root
+      IOTDB_PASSWORD: root
+    depends_on:
+      - iotdb
+
+  grafana:
+    build: ./grafana
+    ports:
+    - "3000:3000"
+    depends_on:
+      - iotdb-grafana

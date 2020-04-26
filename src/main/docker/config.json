@@ -3,8 +3,9 @@
     "connectionString": "s7://192.168.167.210/0/0",
     "scrapeRateMs": 1000,
     "plcFields": {
-      "speed": "%DB444:0.0:UINT",
-      "current": "%DB444:4.0:REAL"
+      "position": "%DB444:0.0:REAL",
+      "random": "%DB444:4.0:REAL",
+      "motor-current": "%DB444:8.0:REAL"
     }
   },
   "mqtt": {
