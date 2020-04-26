@@ -1,0 +1,27 @@
+{
+  "plc": {
+    "connectionString": "s7://192.168.167.210/0/0",
+    "scrapeRateMs": 1000,
+    "plcFields": {
+      "speed": "%DB444:0.0:UINT",
+      "current": "%DB444:4.0:REAL"
+    }
+  },
+  "mqtt": {
+    "server": "farmer.cloudmqtt.com",
+    "port": 23081,
+    "user": "ditto",
+    "password": "ditto"
+  },
+  "ditto": {
+    "namespace": "org.pragmaticindustries",
+    "thingId": "simulated-plc",
+    "featureName": "primary-values"
+  },
+  "iotdb": {
+    "host": "localhost",
+    "port": 6667,
+    "user": "root",
+    "password": "root"
+  }
+}

@@ -9,8 +9,13 @@ import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 import org.json.JSONObject;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class DittoClient implements AutoCloseable {
 
@@ -53,18 +58,6 @@ public class DittoClient implements AutoCloseable {
             "  }\n" +
             "}";
 
-    public static final String MODIFY_SINGLE_FEATURES =
-        "{\n" +
-            "  \"topic\": \"%s/%s/things/twin/commands/modify\",\n" +
-            "    \"headers\": {\n" +
-            "        \"response-required\": true,\n" +
-            "        \"reply-to\": \"ditto/replies/%3$s\",\n" +
-            "        \"correlation-id\": \"%s\"\n" +
-            "    },\n" +
-            "  \"path\": \"/features/%s/properties/%s\",\n" +
-            "  \"value\": %s\n" +
-            "}";
-
     public static final String MODIFY_SINGLE_PROPERTY =
         "{\n" +
             "  \"topic\": \"%s/%s/things/twin/commands/modify\",\n" +
@@ -77,48 +70,35 @@ public class DittoClient implements AutoCloseable {
             "  \"value\": %s\n" +
             "}";
 
+    public static final String MODIFY_MULTIPLE_PROPERTIES =
+        "{\n" +
+            "  \"topic\": \"%s/%s/things/twin/commands/modify\",\n" +
+            "    \"headers\": {\n" +
+            "        \"response-required\": true,\n" +
+            "        \"reply-to\": \"ditto/replies/%3$s\",\n" +
+            "        \"correlation-id\": \"%s\"\n" +
+            "    },\n" +
+            "  \"path\": \"/features/%s/properties\",\n" +
+            "  \"value\": {" +
+            "    %s" +
+            "  }\n" +
+            "}";
+
     private final Mqtt3BlockingClient client;
 
     public DittoClient() throws InterruptedException {
-        client = Mqtt3Client.builder()
+        this(Mqtt3Client.builder()
             .identifier(UUID.randomUUID().toString())
             .serverHost("farmer.cloudmqtt.com")
             .serverPort(23081)
             .sslConfig(MqttClientSslConfig.builder().build())
             .simpleAuth(Mqtt3SimpleAuth.builder().username("ditto").password("ditto".getBytes()).build())
-            .buildBlocking();
+            .buildBlocking());
+    }
 
-        client.connect();
-
-//        final String deviceId = UUID.randomUUID().toString();
-//        System.out.println("Device: " + deviceId);
-//
-//        if (!checkDeviceExists("org.pragmaticindustries", deviceId)) {
-//            System.out.println("Device does not exist, creating...");
-//            final boolean status = createDevice("org.pragmaticindustries", deviceId);
-//
-//            System.out.println("Status: " + status);
-//        } else {
-//            System.out.println("Device exists...");
-//        }
-//
-//        // Create feature
-//        System.out.println("Create Feature");
-//        createFeature("org.pragmaticindustries", deviceId, "machine-part");
-//        System.out.println(getDevice("org.pragmaticindustries", deviceId));
-//        modifyFeature("org.pragmaticindustries", deviceId, "machine-part", "volume", 13);
-//        System.out.println(getDevice("org.pragmaticindustries", deviceId));
-//        modifyFeature("org.pragmaticindustries", deviceId, "machine-part", "volume-2", 13);
-//        System.out.println(getDevice("org.pragmaticindustries", deviceId));
-//        createFeature("org.pragmaticindustries", deviceId, "machine-part-2");
-//        System.out.println(getDevice("org.pragmaticindustries", deviceId));
-//        modifyFeature("org.pragmaticindustries", deviceId, "machine-part-2", "volume", 13);
-//        System.out.println(getDevice("org.pragmaticindustries", deviceId));
-//
-//        System.out.println(getDevice("org.pragmaticindustries", deviceId));
-//
-//        System.out.println("Disconnecting");
-//        client.disconnect();
+    public DittoClient(Mqtt3BlockingClient mqttClient) {
+        this.client = mqttClient;
+        mqttClient.connect();
     }
 
     public boolean createFeature(String namespace, String thingId, String featureName) throws InterruptedException {
@@ -142,9 +122,38 @@ public class DittoClient implements AutoCloseable {
         }
     }
 
+    public boolean modifyMultipleProperties(String namespace, String thingId, String featureName, List<String> properties, List<Object> vals) throws InterruptedException {
+        final JSONObject jsonObject = requestReply(correlationId -> {
+
+            // Merge map
+            final String map = IntStream.range(0, properties.size())
+                .mapToObj(i -> {
+                    return String.format("\"%s\": %s", properties.get(i), vals.get(i));
+                })
+                .collect(Collectors.joining(",\n"));
+
+            final String s = String.format(MODIFY_MULTIPLE_PROPERTIES, namespace, thingId, correlationId, featureName, map);
+            return s;
+        }, json -> {
+            logger.trace("Response {}", json.toString());
+            return json;
+        });
+
+        int status = jsonObject.getInt("status");
+
+        if (status == 201 || status == 204) {
+            return true;
+        } else {
+            final JSONObject value = jsonObject.getJSONObject("value");
+            final String message = value.getString("message");
+
+            throw new RuntimeException(message);
+        }
+    }
+
     public boolean modifyFeature(String namespace, String thingId, String featureName, String propertyName, Object val) throws InterruptedException {
         final JSONObject jsonObject = requestReply(correlationId -> {
-            final String s = String.format(MODIFY_SINGLE_FEATURES, namespace, thingId, correlationId, featureName, propertyName, val);
+            final String s = String.format(MODIFY_SINGLE_PROPERTY, namespace, thingId, correlationId, featureName, propertyName, val);
             return s;
         }, json -> {
             logger.trace("Response {}", json.toString());
@@ -226,8 +235,14 @@ public class DittoClient implements AutoCloseable {
                 .payload(requestHandler.apply(correlationId).getBytes())
                 .send();
 
-            Mqtt3Publish msg = publishes
-                .receive();
+            Optional<Mqtt3Publish> msgOptional = publishes
+                .receive(5, TimeUnit.SECONDS);
+
+            if (!msgOptional.isPresent()) {
+                return null;
+            }
+
+            Mqtt3Publish msg = msgOptional.get();
 
             String s = new String(msg.getPayloadAsBytes());
 

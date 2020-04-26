@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+
+  ditto-mqtt-bridge:
+    image: mqtt-bridge
+    volumes:
+      - "./config.json:/opt/service/config.json"
+    depends_on:
+      - iotdb
+
+  plc4x-producer:
+    image: plc4x-producer
+    volumes:
+      - "./config.json:/opt/service/config.json"
+
+  iotdb:
+    image: apache/iotdb:0.9.1-jre8
+    ports:
+    - "6667:6667"
+    - "31999:31999"
+    - "8181:8181"
+
+  # TODO Add IoTDB Grafana Adapter
+  # TODO Add Custom Grafana
