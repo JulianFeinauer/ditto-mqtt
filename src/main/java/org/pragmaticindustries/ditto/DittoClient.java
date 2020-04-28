@@ -236,10 +236,10 @@ public class DittoClient implements AutoCloseable {
                 .send();
 
             Optional<Mqtt3Publish> msgOptional = publishes
-                .receive(5, TimeUnit.SECONDS);
+                .receive(10, TimeUnit.SECONDS);
 
             if (!msgOptional.isPresent()) {
-                return null;
+                throw new RuntimeException("Time Out while waiting for Response from Ditto...");
             }
 
             Mqtt3Publish msg = msgOptional.get();

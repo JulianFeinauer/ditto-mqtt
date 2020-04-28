@@ -3,8 +3,16 @@
     "connectionString": "s7://192.168.167.210/0/0",
     "scrapeRateMs": 1000,
     "plcFields": {
-      "speed": "%DB444:0.0:UINT",
-      "current": "%DB444:4.0:REAL"
+      "position": "%DB444:0.0:REAL",
+      "random": "%DB444:4.0:REAL",
+      "motor-current": "%DB444:8.0:REAL",
+      "process-state": "%DB444:12.0:UINT",
+      "availability": "%DB444:14.0:BOOL",
+      "availability1": "%DB444:14.1:BOOL",
+      "increasing-counter": "%DB444:16.0:DINT",
+      "block_cut_percent": "%DB444:20.0:INT",
+      "remaining_block_cuts": "%DB444:22.0:DINT",
+      "cut_duration_ms": "%DB444:26.0:DINT"
     }
   },
   "mqtt": {
@@ -19,7 +27,7 @@
     "featureName": "primary-values"
   },
   "iotdb": {
-    "host": "localhost",
+    "host": "iotdb",
     "port": 6667,
     "user": "root",
     "password": "root"
