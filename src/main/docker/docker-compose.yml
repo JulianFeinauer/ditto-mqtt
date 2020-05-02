@@ -26,7 +26,7 @@ services:
       - "8181:8181"
 
   iotdb-grafana:
-    image: jfeinauer/iotdb-grafana:0.9.1
+    image: jfeinauer/iotdb-grafana:0.9.3
     ports:
       - "8888:8888"
       - "4000:4000"

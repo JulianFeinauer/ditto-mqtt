@@ -4,8 +4,7 @@
 #    mvn clean package -DskipTests -f ~/Develop/incubator-iotdb/pom.xml
 #fi
 rm target/*
-cp run.sh target/
-cp -R ~/Develop/incubator-iotdb/grafana/target/iotdb-grafana-*.war target/
-cp -R ~/Develop/incubator-iotdb/grafana/conf/application.properties target/
-docker image build -t jfeinauer/iotdb-grafana:0.9.1 . \
-    && docker push jfeinauer/iotdb-grafana:0.9.1
+cp ~/Develop/incubator-iotdb/grafana/target/iotdb-grafana-*.war target/iotdb-grafana.war
+cp ~/Develop/incubator-iotdb/grafana/src/main/resources/application.properties target/
+docker image build -t jfeinauer/iotdb-grafana:0.9.3 . \
+    && docker push jfeinauer/iotdb-grafana:0.9.3

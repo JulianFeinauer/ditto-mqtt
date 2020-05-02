@@ -5,4 +5,4 @@ ADD target/* /iotdb/
 EXPOSE 8888
 EXPOSE 4000
 WORKDIR /iotdb/
-ENTRYPOINT ["/iotdb/run.sh"]
+ENTRYPOINT ["java", "-Dspring.datasource.url=jdbc:iotdb://${IOTDB_HOST}:${IOTDB_PORT}", "-Dspring.datasource.username=${IOTDB_USER}", "-Dspring.datasource.password=${IOTDB_PASSWORD}", "-jar", "/iotdb/iotdb-grafana.war"]
