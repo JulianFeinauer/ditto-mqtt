@@ -12,6 +12,12 @@ public class PlcConfig {
     public PlcConfig() {
     }
 
+    public PlcConfig(int scrapeRateMs, String connectionString, Map<String, String> plcFields) {
+        this.scrapeRateMs = scrapeRateMs;
+        this.connectionString = connectionString;
+        this.plcFields = plcFields;
+    }
+
     public int getScrapeRateMs() {
         return scrapeRateMs;
     }

@@ -9,6 +9,7 @@ import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 import org.json.JSONObject;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +30,17 @@ public class DittoClient implements AutoCloseable {
             "        \"response-required\": true,\n" +
             "        \"reply-to\": \"ditto/replies/%s\",\n" +
             "        \"correlation-id\": \"%3$s\"\n" +
+            "    }\n" +
+            "}";
+
+    public static final String RETRIEVE_FEATURE =
+        "{\n" +
+            "    \"topic\": \"%s/%s/things/twin/commands/retrieve\",\n" +
+            "    \"path\": \"/features/%s/properties\",\n" +
+            "    \"headers\": {\n" +
+            "        \"response-required\": true,\n" +
+            "        \"reply-to\": \"ditto/replies/%s\",\n" +
+            "        \"correlation-id\": \"%4$s\"\n" +
             "    }\n" +
             "}";
 
@@ -79,6 +91,20 @@ public class DittoClient implements AutoCloseable {
             "        \"correlation-id\": \"%s\"\n" +
             "    },\n" +
             "  \"path\": \"/features/%s/properties\",\n" +
+            "  \"value\": {" +
+            "    %s" +
+            "  }\n" +
+            "}";
+
+    public static final String MODIFY_MULTIPLE_PROPERTIES_NEW =
+        "{\n" +
+            "  \"topic\": \"%s/%s/things/twin/commands/modify\",\n" +
+            "    \"headers\": {\n" +
+            "        \"response-required\": true,\n" +
+            "        \"reply-to\": \"ditto/replies/%3$s\",\n" +
+            "        \"correlation-id\": \"%s\"\n" +
+            "    },\n" +
+            "  \"path\": \"/features/%s/properties/values\",\n" +
             "  \"value\": {" +
             "    %s" +
             "  }\n" +
@@ -151,6 +177,35 @@ public class DittoClient implements AutoCloseable {
         }
     }
 
+    public boolean modifyMultipleProperties2(String namespace, String thingId, String featureName, List<String> properties, List<Object> vals) throws InterruptedException {
+        final JSONObject jsonObject = requestReply(correlationId -> {
+
+            // Merge map
+            final String map = IntStream.range(0, properties.size())
+                .mapToObj(i -> {
+                    return String.format("\"%s\": { \"v\": %s, \"t\": %d }", properties.get(i), normalize(vals.get(i)), Instant.now().toEpochMilli());
+                })
+                .collect(Collectors.joining(",\n"));
+
+            final String s = String.format(MODIFY_MULTIPLE_PROPERTIES_NEW, namespace, thingId, correlationId, featureName, map);
+            return s;
+        }, json -> {
+            logger.trace("Response {}", json.toString());
+            return json;
+        });
+
+        int status = jsonObject.getInt("status");
+
+        if (status == 201 || status == 204) {
+            return true;
+        } else {
+            final JSONObject value = jsonObject.getJSONObject("value");
+            final String message = value.getString("message");
+
+            throw new RuntimeException(message);
+        }
+    }
+
     public boolean modifyFeature(String namespace, String thingId, String featureName, String propertyName, Object val) throws InterruptedException {
         final JSONObject jsonObject = requestReply(correlationId -> {
             final String s = String.format(MODIFY_SINGLE_PROPERTY, namespace, thingId, correlationId, featureName, propertyName, val);
@@ -194,6 +249,20 @@ public class DittoClient implements AutoCloseable {
 
     public JSONObject getDevice(String namespace, String thingId) throws InterruptedException {
         JSONObject jsonObject = requestReply(correlationId -> String.format(CHECK_EXISTS, namespace, thingId, correlationId),
+            json -> {
+                logger.trace("Response {}", json.toString());
+                return json;
+            });
+
+        if (jsonObject.getInt("status") != 200) {
+            throw new RuntimeException("");
+        }
+
+        return jsonObject;
+    }
+
+    public JSONObject getFeature(String namespace, String thingId, String featureName) throws InterruptedException {
+        JSONObject jsonObject = requestReply(correlationId -> String.format(RETRIEVE_FEATURE, namespace, thingId, featureName, correlationId),
             json -> {
                 logger.trace("Response {}", json.toString());
                 return json;
