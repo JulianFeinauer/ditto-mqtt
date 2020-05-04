@@ -99,3 +99,10 @@
     }
 }
 ```
+
+# Vorto
+
+GET Url for mapped Model:
+```
+https://vorto-dev.eclipse.org/api/v1/models/vorto.private.julian.demo.plc4x.SimulatedPlcTwo:1.0.0/content/simulatedplc
+```
