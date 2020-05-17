@@ -299,12 +299,33 @@ Our gateway has 3 main tasks:
     
 The implementation we show here is very simple and straightforward. For productive use one would take other aspects into consideration as more logging, restart capabilities, handling of input errors and so on.
 The only input we need for the gateway is the vorto repository and the Function Block Mapping and the Eclipse Ditto connection information as well as a thing id (????).
-Furthermore we will use a fixed polling interval of 1 second to keep the example implementation simple but it should be easy to adapt the example accordingly. 
 
 // TOOD Kevin, do we need the thing id or is this done automagically?
 
 ```
+static class PlcFetchInformation {
+    private final String url;
+    private final String address;
+    private final int rateMs;
+}
+```
 
+```
+// Fetch Data from Vorto
+
+// Prepare Executor
+ScheduledExecutorService executor = Executors.newScheduledThreadPool(4);
+
+for (PlcFetchInformation field : fields) {
+    executor.
+}
+// Start Loop
+for (PlcConnection connection = new PlcDriverManager().connect(url)) {
+    connection.readRequestBuilder()
+        .addItem()
+        .build();
+    Thread.sleep(1_000);
+}
 ```
 
 ### The Backend - Ditto

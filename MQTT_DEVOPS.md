@@ -36,7 +36,7 @@ curl -X POST -u devops:foobar -H 'Content-Type: application/json' -d '{
             }]
         }
     }
-}' http://91.103.114.59:49188/devops/piggyback/connectivity?timeout=80000
+}' https://twin.pragmaticindustries.de/devops/piggyback/connectivity?timeout=80000
 ```
 
 ```
@@ -64,5 +64,5 @@ curl -X POST -u devops:foobar -H 'Content-Type: application/json' -d '{
             }]
         }
     }
-}' http://91.103.114.59:49188/devops/piggyback/connectivity?timeout=80000
+}' https://twin.pragmaticindustries.de/devops/piggyback/connectivity?timeout=80000
 ```
