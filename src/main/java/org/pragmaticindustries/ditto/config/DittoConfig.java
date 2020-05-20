@@ -1,5 +1,7 @@
 package org.pragmaticindustries.ditto.config;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 public class DittoConfig {
 
     private String namespace = "";
@@ -8,6 +10,12 @@ public class DittoConfig {
 
     public DittoConfig() {
         // For Jackson
+    }
+
+    public DittoConfig(String namespace, String thingId, String featureName) {
+        this.namespace = namespace;
+        this.thingId = thingId;
+        this.featureName = featureName;
     }
 
     public String getNamespace() {

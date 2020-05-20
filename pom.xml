@@ -95,6 +95,23 @@
                             </run>
                         </image>
                         <image>
+                            <name>jfeinauer/plc4x-to-ditto-producer:${project.version}-arm32</name>
+                            <alias>producer</alias>
+                            <build>
+                                <!-- filter>@</filter-->
+                                <contextDir>${project.basedir}/src/main/docker/producer</contextDir>
+                                <dockerFile>Dockerfile-arm32</dockerFile>
+                                <assembly>
+                                    <descriptorRef>artifact-with-dependencies</descriptorRef>
+                                </assembly>
+                            </build>
+                            <run>
+                                <ports>
+                                    <port>8080:8080</port>
+                                </ports>
+                            </run>
+                        </image>
+                        <image>
                             <name>jfeinauer/mqtt-to-iotdb-bridge:${project.version}</name>
                             <alias>bridge</alias>
                             <build>

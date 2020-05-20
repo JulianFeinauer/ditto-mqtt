@@ -10,6 +10,13 @@ public class MqttConfiguration {
     public MqttConfiguration() {
     }
 
+    public MqttConfiguration(String server, int port, String user, String password) {
+        this.server = server;
+        this.port = port;
+        this.user = user;
+        this.password = password;
+    }
+
     public String getServer() {
         return server;
     }
