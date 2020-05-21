@@ -25,20 +25,24 @@ The overall architecture is shown in Figure 1.
  ## General Architecture
  
 [Figure 1](#figure_1) shows the general architecture of the setup. On the Edge we have a gateway running which communicates with the PLC to fetch the necessary data.
-The Gateway communicates with a (public) Vorto repository to fetch all informations and parameters to get the desired data. When data is aquired the Gateway forwards the data to a Ditto instance where it is then available via HTTP or WebSockets. External Services can query the datasets there.  
+The Gateway communicates with a (public) Vorto repository to fetch all information and parameters to get the desired data. When data is acquired the Gateway forwards the data to a Ditto instance where it is then available via HTTP or WebSockets. External Services can query the datasets there.  
  
  ## Details
  
  ### The Model - Vorto
  
 In our scenario we expect the "Thing" to be some kind of machinery. To get a semantical description of the data we will collect, we need to have a semantic model of the machine, its properties and its features.
-[Eclipse Vorto](https://vorto.eclipse.org/) provides the framework for exactly that. We describe the machine in an example vorto file:
- 
- *TODO Kevin: More Vorto Details here*
+[Eclipse Vorto](https://github.com/eclipse/vorto/) provides the framework for exactly that. 
+Eclipse Vorto is an open source project for semantic modelling of IoT devices. The project consists of 3 main components:
+- a domain specific language - [Vortolang](https://github.com/eclipse/vorto/blob/development/docs/vortolang-1.0.md) - to describe the characteristics and capabilities of device models
+- a [repository](https://vorto.eclipse.org/) to edit, manage, version and distribute the Vorto models
+- [plugins](https://vorto.eclipse.org/#/generators) to transform Vorto models into different representations (e.g. JSON Schema, etc.), REST request templates (e.g. for Ditto)
+
+For our use case, we describe the machine in an example vorto file using Vortolang:
  
 ```
 vortolang 1.0
-namespace vorto.private.julian.demo.plc4x
+namespace org.apache.plc4x.examples
 version 1.0.0
 displayname "SimulatedPlcTwo"
 description "Functionblock for SimulatedPlcTwo"
@@ -55,32 +59,34 @@ functionblock SimulatedPlcTwo {
 
 }
 ```
-(See: Repository link).
+([View it in the official Vorto repository](https://vorto.eclipse.org/#/details/org.apache.plc4x.examples:SimulatedPlcTwo:1.0.0)).
 
 *TODO Kevin: Model auf "offizielles Modell" umstellen. Date etwas erklären*
 
-As described in our Vorto file our machine exposes its position as floating point value and some other properties, which is described in the vortofile.
+As described in our Vorto file, our machine exposes its position as floating-point value and some other properties, which are described in the vortofile.
 This description aims towards usage of the data. So someone who later wants to access the data, e.g. for analysis has a semantic description of what the datapoints mean.
 
-For the Gateway we also want to add information on how to read this information from the machine. It could be, that this differs between different manufactured machines, e.g. due to changes in the machine programm. Although the general properties and features of the machine are always the same.
+For the Gateway, we also want to add information on how to read this information from the machine. It could be, that this differs between different manufactured machines, e.g. due to changes in the machine program. Although the general properties and features of the machine are always the same.
 Vorto provides a feature to achieve exactly that: [Function Block Mapping](https://github.com/eclipse/vorto/blob/development/docs/vortolang-1.0.md#function-block-mapping).
 
-// TODO Kevin: Add more details here about it...
+The Function Block Mapping allows adding platform- or implementation-specific information to a generic Vorto model. This helps to keep the Vorto models platform-independent and re-usable, as they only contain the semantically relevant information.
+It works by enriching properties of the Vorto model with the platform-specific information - the complete model with the enriched properties can be retrieved by adding your target platform as path parameter to the REST request to the standard API: /api/v1/models/{model ID}/content/{target platform}
 
-In our case, the informations have to be read from a PLC which is connected to the machine. Thus, for each field we need to add information about the PLC, the address / memory location where the information is stored and a poll time, i.e. how often we want to read the value from the PLC and update the twin.
+In our case, the information has to be read from a PLC which is connected to the machine. Thus, for each field we need to add information about the PLC, the address / memory location where the information is stored and a poll time, i.e. how often we want to read the value from the PLC and update the twin.
 
-Our exemplary Function Mapping looks the following
+Our exemplary Function Block Mapping looks as follows:
 
 ```
 vortolang 1.0
-namespace vorto.private.julian.demo.plc4x
+namespace org.apache.plc4x.examples
 version 1.0.0
 displayname "SimulatedPLC"
 description "Mapping for SimulatedPLC"
 
-using vorto.private.julian.demo.plc4x.SimulatedPlcTwo;1.0.0
+using org.apache.plc4x.examples.SimulatedPlcTwo;1.0.0
 
 functionblockmapping SimulatedPLC {
+
 	targetplatform simulatedPlc
 	
 	from SimulatedPlcTwo.configuration.position to position with {
@@ -88,17 +94,18 @@ functionblockmapping SimulatedPLC {
 	    rate: "2000",
 	    address: "%DB"
 	}
-	
+
 }
 ```
+([View it in the official Vorto repository](https://vorto.eclipse.org/#/details/org.apache.plc4x.examples:SimulatedPLC:1.0.0)
 
 Here we introduce three (arbitrary) keys, which we call `url`, `rate` and `address`.
 The respective values represent the url of the PLC, the rate with which we will read the respective value in milliseconds and the address inside the PLC.
 
-Vorto automatically merges both models automatically and exposes them via a HTTP GET Endpoint:
+Vorto automatically merges both models and exposes them via an HTTP GET Endpoint:
 
 ```
-https://vorto-dev.eclipse.org/api/v1/models/vorto.private.julian.demo.plc4x.SimulatedPlcTwo:1.0.0/content/simulatedplc
+https://vorto.eclipse.org/api/v1/models/org.apache.plc4x.examples.SimulatedPlcTwo:1.0.0/content/simulatedplc
 ```
 
 For the two models shown above, this looks
@@ -275,12 +282,12 @@ The most important section for the gateway here is the `configurationProperties`
 }
 ```
 
-In the next section we will show how we can write an according gateway which is able to read data from a wide range of PLCs fully automated with only the data given above in the two Vorto models.
+In the next section we will show, how we can write an according gateway, which is able to read data from a wide range of PLCs fully automated with only the data given above in the two Vorto models.
 This is achieved by using the Open Source Project [Apache PLC4X](https://plc4x.apache.org).
  
 ### The Gateway - PLC4X
  
-[Apache PLC4X](https://plc4x.apache.org) is a project whcih aims at providing drivers for all PLC types and other industrial busses with one single programming interface.
+[Apache PLC4X](https://plc4x.apache.org) is a project which aims at providing drivers for all PLC types and other industrial buses with one single programming interface.
 Its mission statement is
  
 > PLC4X is a set of libraries for communicating with industrial programmable logic controllers (PLCs) using a variety of protocols but with a shared API.
