@@ -62,6 +62,7 @@ functionblock SimulatedPlcTwo {
 [View it in the official Vorto repository](https://vorto.eclipse.org/#/details/org.apache.plc4x.examples:SimulatedPlcTwo:1.0.0).
 
 *TODO Kevin: Model auf "offizielles Modell" umstellen. Date etwas erklären*
+*--> Das Modell ist umgestellt. Was meintest du hiermit? "Date etwas erklären"*
 
 As described in our Vorto file, our machine exposes its position as floating-point value and some other properties, which are described in the vortofile.
 This description aims towards usage of the data. So someone who later wants to access the data, e.g. for analysis has a semantic description of what the datapoints mean.
@@ -310,7 +311,8 @@ Our gateway has 3 main tasks:
 The implementation we show here is very simple and straightforward. For productive use one would take other aspects into consideration as more logging, restart capabilities, handling of input errors and so on.
 The only input we need for the gateway is the vorto repository and the Function Block Mapping and the Eclipse Ditto connection information as well as a thing id (????).
 
-// TOOD Kevin, do we need the thing id or is this done automagically?
+// TODO Kevin, do we need the thing id or is this done automagically?
+--> you will need the thing ID - Vorto generates the Ditto Thing JSON without the thing ID (as Vorto does not know it), so you'll need to add it to the JSON afterwards
 
 ```
 static class PlcFetchInformation {
