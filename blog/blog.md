@@ -70,7 +70,10 @@ For the Gateway, we also want to add information on how to read this information
 Vorto provides a feature to achieve exactly that: [Function Block Mapping](https://github.com/eclipse/vorto/blob/development/docs/vortolang-1.0.md#function-block-mapping).
 
 The Function Block Mapping allows adding platform- or implementation-specific information to a generic Vorto model. This helps to keep the Vorto models platform-independent and re-usable, as they only contain the semantically relevant information.
-It works by enriching properties of the Vorto model with the platform-specific information - the complete model with the enriched properties can be retrieved by adding your target platform as path parameter to the REST request to the standard API: /api/v1/models/{model ID}/content/{target platform}
+It works by enriching properties of the Vorto model with the platform-specific information - the complete model with the enriched properties can be retrieved by adding your target platform as path parameter to the REST request to the standard API: 
+```
+GET /api/v1/models/{model ID}/content/{target platform}
+```
 
 In our case, the information has to be read from a PLC which is connected to the machine. Thus, for each field we need to add information about the PLC, the address / memory location where the information is stored and a poll time, i.e. how often we want to read the value from the PLC and update the twin.
 
