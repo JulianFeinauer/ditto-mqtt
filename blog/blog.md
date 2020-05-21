@@ -1,14 +1,14 @@
 # Building an Industrial IoT Solution - Open Source
 
 In this post we will show how you can build an Industrial IoT Solution with Gateway / Client and Backend fully based on Open Source Technology.
-Industrial IoT means that our things are not the well known Consumer goods as mobiles, watches or wearables but are industrial machinery. In most situtations machines or automation lines are controlled by PLC Controllers. Thus, to talk to machines you have to talk to PLC controllers.
+Industrial IoT means that our things are not the well-known Consumer goods as mobiles, watches or wearables but are industrial machinery. In most situtations machines or automation lines are controlled by PLC Controllers. Thus, to talk to machines you have to talk to PLC controllers.
 The PLCs have all sensors and actors of the machines attached, thus you get every information about the machine and could, in theory, even change the operation of the machine.
 In this example we focus on 
 
 * describing the machine, its data and its capabilities
 * reading the data from the PLC controller
 * send the data from the secured shopfloor network to a (cloud) backend
-* make the data there accessible to other services for e.g. visualization, further analysis, artifical intelligence, ...
+* make the data there accessible to other services for e.g. visualization, further analysis, artificial intelligence, ...
 
 We will show how all points above can be realized with the additional benefits of
 
@@ -31,7 +31,7 @@ The Gateway communicates with a (public) Vorto repository to fetch all informati
  
  ### The Model - Vorto
  
-In our scenario we expect the "Thing" to be some kind of machinery. To get a semantical description of the data we will collect, we need to have a semantic model of the machine, its properties and its features.
+In our scenario we expect the "Thing" to be some kind of machinery. To get a semantic description of the data we will collect, we need to have a semantic model of the machine, its properties and its features.
 [Eclipse Vorto](https://github.com/eclipse/vorto/) provides the framework for exactly that. 
 Eclipse Vorto is an open source project for semantic modelling of IoT devices. The project consists of 3 main components:
 - a domain specific language - [Vortolang](https://github.com/eclipse/vorto/blob/development/docs/vortolang-1.0.md) - to describe the characteristics and capabilities of device models
@@ -59,7 +59,7 @@ functionblock SimulatedPlcTwo {
 
 }
 ```
-([View it in the official Vorto repository](https://vorto.eclipse.org/#/details/org.apache.plc4x.examples:SimulatedPlcTwo:1.0.0)).
+[View it in the official Vorto repository](https://vorto.eclipse.org/#/details/org.apache.plc4x.examples:SimulatedPlcTwo:1.0.0).
 
 *TODO Kevin: Model auf "offizielles Modell" umstellen. Date etwas erklären*
 
@@ -97,7 +97,7 @@ functionblockmapping SimulatedPLC {
 
 }
 ```
-([View it in the official Vorto repository](https://vorto.eclipse.org/#/details/org.apache.plc4x.examples:SimulatedPLC:1.0.0)
+[View it in the official Vorto repository](https://vorto.eclipse.org/#/details/org.apache.plc4x.examples:SimulatedPLC:1.0.0)
 
 Here we introduce three (arbitrary) keys, which we call `url`, `rate` and `address`.
 The respective values represent the url of the PLC, the rate with which we will read the respective value in milliseconds and the address inside the PLC.
