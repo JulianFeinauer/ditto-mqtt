@@ -6,12 +6,19 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
-import org.json.JSONArray;
+import org.apache.plc4x.java.PlcDriverManager;
+import org.apache.plc4x.java.api.PlcConnection;
+import org.apache.plc4x.java.api.exceptions.PlcConnectionException;
+import org.apache.plc4x.java.api.messages.PlcReadResponse;
+import org.apache.plc4x.java.api.types.PlcResponseCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -21,6 +28,9 @@ import java.util.Optional;
 public class Plc4XVortoDitto {
 
     private static final Logger logger = LoggerFactory.getLogger(Plc4XVortoDitto.class);
+
+    private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(4);
+    public static final String FIELD_NAME = "value";
 
     public static void main(String[] args) throws IOException {
         // Phase 1 - Fetch Data from Vorto
@@ -42,6 +52,16 @@ public class Plc4XVortoDitto {
 
         ArrayNode stereotypes = getConfigProperties(mappingJson);
 
+        // Create Device in Ditto if not exists
+        ObjectNode dittoConfig = (ObjectNode) dittoJson.get("features")
+            .get("simulatedplctwo")
+            .get("properties")
+            .get("configuration");
+
+        logger.info(dittoJson.toPrettyString());
+
+        // Fetch Mappings and initialize PLC4X Scraping
+
         logger.info("========================");
         logger.info("Configuration Properties");
         logger.info("========================");
@@ -60,21 +80,42 @@ public class Plc4XVortoDitto {
                 String url = mappingAttributes.get().get("url").asText();
 
                 logger.info("Mapping {} - {} - {}", url, address, rate);
+
+                // Start scraping
+                executor.scheduleAtFixedRate(() -> {
+                    try (PlcConnection connection = new PlcDriverManager().getConnection(url)) {
+                        PlcReadResponse response = connection.readRequestBuilder()
+                            .addItem(FIELD_NAME, address)
+                            .build()
+                            .execute()
+                            .get(5, TimeUnit.SECONDS);
+
+                        if (response.getResponseCode(FIELD_NAME) != PlcResponseCode.OK) {
+                            logger.warn("Issue with fetching field value {}, got response {}", address, response.getResponseCode(FIELD_NAME));
+                            return;
+                        }
+
+                        // Send the Value to Ditto
+                        sendValueToDitto(name, type, response);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }, rate, rate, TimeUnit.MILLISECONDS);
+
             } else {
                 logger.info("No mapping given, will be ignored...");
             }
         }
+    }
 
-        ObjectNode dittoConfig = (ObjectNode) dittoJson.get("features")
-            .get("simulatedplctwo")
-            .get("properties")
-            .get("configuration");
+    private static void sendValueToDitto(String name, String type, PlcReadResponse response) {
+        assert "DOUBLE".equals(type);
 
-        logger.info(dittoJson.toPrettyString());
+        // Fetch value from PLC4X Response
+        Double value = response.getDouble(FIELD_NAME);
 
-        // Phase 2 - Configure PLC4X
+        // Send the update to Ditto...
 
-        // Phase 3 - Send the data to Ditto
     }
 
     private static Optional<JsonNode> getStereotype(JsonNode mappingJson) {
