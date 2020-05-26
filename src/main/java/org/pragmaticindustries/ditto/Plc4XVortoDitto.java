@@ -6,16 +6,21 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
+import org.json.JSONArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
- * TODO write comment
  *
  * @author julian
  * Created by julian on 18.05.20
  */
 public class Plc4XVortoDitto {
+
+    private static final Logger logger = LoggerFactory.getLogger(Plc4XVortoDitto.class);
 
     public static void main(String[] args) throws IOException {
         // Phase 1 - Fetch Data from Vorto
@@ -35,32 +40,48 @@ public class Plc4XVortoDitto {
         JsonNode dittoJson = om.reader().readTree(dittoJsonString);
         JsonNode mappingJson = om.reader().readTree(mappingJsonString);
 
-        JsonNode mappingAttributes = getStereotypes(mappingJson).get("attributes");
+        ArrayNode stereotypes = getConfigProperties(mappingJson);
 
-        String address = mappingAttributes.get("address").asText();
-        String rate = mappingAttributes.get("rate").asText();
-        String url = mappingAttributes.get("url").asText();
+        logger.info("========================");
+        logger.info("Configuration Properties");
+        logger.info("========================");
+
+        for (JsonNode stereotype : stereotypes) {
+            String name = stereotype.get("name").asText();
+            String type = stereotype.get("type").asText();
+
+            logger.info("Property {} - {}", name, type);
+
+            Optional<JsonNode> mappingAttributes = getStereotype(stereotype);
+
+            if (mappingAttributes.isPresent()) {
+                String address = mappingAttributes.get().get("address").asText();
+                long rate = Long.parseLong(mappingAttributes.get().get("rate").asText());
+                String url = mappingAttributes.get().get("url").asText();
+
+                logger.info("Mapping {} - {} - {}", url, address, rate);
+            } else {
+                logger.info("No mapping given, will be ignored...");
+            }
+        }
 
         ObjectNode dittoConfig = (ObjectNode) dittoJson.get("features")
             .get("simulatedplctwo")
             .get("properties")
             .get("configuration");
 
-        dittoConfig.put("address", address);
-        dittoConfig.put("rate", rate);
-        dittoConfig.put("url", url);
-
-        System.out.println(dittoJson.toPrettyString());
+        logger.info(dittoJson.toPrettyString());
     }
 
-    private static JsonNode getStereotypes(JsonNode mappingJson) {
-        return getConfigProperties(mappingJson)
-            .get("stereotypes").get(0);
+    private static Optional<JsonNode> getStereotype(JsonNode mappingJson) {
+        return Optional.ofNullable(mappingJson.get("stereotypes"))
+            .map(json -> json.get(0))
+            .map(json -> json.get("attributes"));
     }
 
-    private static JsonNode getConfigProperties(JsonNode mappingJson) {
+    private static ArrayNode getConfigProperties(JsonNode mappingJson) {
         return mappingJson.get("models")
             .get("org.apache.plc4x.examples:SimulatedPlcTwo:1.0.0")
-            .get("configurationProperties").get(0);
+            .withArray("configurationProperties");
     }
 }
