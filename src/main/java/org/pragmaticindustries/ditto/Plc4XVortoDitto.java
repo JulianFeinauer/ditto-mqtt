@@ -71,6 +71,10 @@ public class Plc4XVortoDitto {
             .get("configuration");
 
         logger.info(dittoJson.toPrettyString());
+
+        // Phase 2 - Configure PLC4X
+
+        // Phase 3 - Send the data to Ditto
     }
 
     private static Optional<JsonNode> getStereotype(JsonNode mappingJson) {
