@@ -1,4 +1,4 @@
-FROM openjdk:8-jre
+FROM arm32v7/openjdk:8-jre
 MAINTAINER Julian
 
 CMD mkdir -p /opt/service/
