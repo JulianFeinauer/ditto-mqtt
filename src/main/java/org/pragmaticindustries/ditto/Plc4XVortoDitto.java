@@ -54,13 +54,13 @@ public class Plc4XVortoDitto {
     }
 
     private static JsonNode getStereotypes(JsonNode mappingJson) {
-        return ((ArrayNode) getConfigProperties(mappingJson)
-            .get("stereotypes")).get(0);
+        return getConfigProperties(mappingJson)
+            .get("stereotypes").get(0);
     }
 
     private static JsonNode getConfigProperties(JsonNode mappingJson) {
-        return ((ArrayNode) mappingJson.get("models")
+        return mappingJson.get("models")
             .get("org.apache.plc4x.examples:SimulatedPlcTwo:1.0.0")
-            .get("configurationProperties")).get(0);
+            .get("configurationProperties").get(0);
     }
 }
