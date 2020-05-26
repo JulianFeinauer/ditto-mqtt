@@ -8,7 +8,6 @@ import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.plc4x.java.PlcDriverManager;
 import org.apache.plc4x.java.api.PlcConnection;
-import org.apache.plc4x.java.api.exceptions.PlcConnectionException;
 import org.apache.plc4x.java.api.messages.PlcReadResponse;
 import org.apache.plc4x.java.api.types.PlcResponseCode;
 import org.slf4j.Logger;
@@ -35,22 +34,13 @@ public class Plc4XVortoDitto {
     public static void main(String[] args) throws IOException {
         // Phase 1 - Fetch Data from Vorto
         HttpClient client = new HttpClient();
-        GetMethod getDittoJson = new GetMethod("https://vorto.eclipse.org/api/v1/generators/eclipseditto/models/org.apache.plc4x.examples.SimulatedPlcTwo:1.0.0?target=thingJson");
-        GetMethod getMapping = new GetMethod("https://vorto.eclipse.org/api/v1/models/org.apache.plc4x.examples.SimulatedPlcTwo:1.0.0/content/simulatedplc");
+        String dittoJsonString = doHttpGet(client, "https://vorto.eclipse.org/api/v1/generators/eclipseditto/models/org.apache.plc4x.examples.SimulatedPlcTwo:1.0.0?target=thingJson");
+        String mappingJsonString = doHttpGet(client, "https://vorto.eclipse.org/api/v1/models/org.apache.plc4x.examples.SimulatedPlcTwo:1.0.0/content/simulatedplc");
 
-        client.executeMethod(getDittoJson);
-
-        String dittoJsonString = getDittoJson.getResponseBodyAsString();
-        getDittoJson.releaseConnection();
-        client.executeMethod(getMapping);
-        String mappingJsonString = getMapping.getResponseBodyAsString();
-        getMapping.releaseConnection();
-
+        // Map to JSON
         ObjectMapper om = new ObjectMapper();
         JsonNode dittoJson = om.reader().readTree(dittoJsonString);
         JsonNode mappingJson = om.reader().readTree(mappingJsonString);
-
-        ArrayNode stereotypes = getConfigProperties(mappingJson);
 
         // Create Device in Ditto if not exists
         ObjectNode dittoConfig = (ObjectNode) dittoJson.get("features")
@@ -61,10 +51,11 @@ public class Plc4XVortoDitto {
         logger.info(dittoJson.toPrettyString());
 
         // Fetch Mappings and initialize PLC4X Scraping
-
         logger.info("========================");
         logger.info("Configuration Properties");
         logger.info("========================");
+
+        ArrayNode stereotypes = getConfigProperties(mappingJson);
 
         for (JsonNode stereotype : stereotypes) {
             String name = stereotype.get("name").asText();
@@ -98,7 +89,7 @@ public class Plc4XVortoDitto {
                         // Send the Value to Ditto
                         sendValueToDitto(name, type, response);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        logger.warn("Unable to connect to PLC4X / Execute request", e);
                     }
                 }, rate, rate, TimeUnit.MILLISECONDS);
 
@@ -106,6 +97,14 @@ public class Plc4XVortoDitto {
                 logger.info("No mapping given, will be ignored...");
             }
         }
+    }
+
+    private static String doHttpGet(HttpClient client, String s) throws IOException {
+        GetMethod getMapping = new GetMethod(s);
+        client.executeMethod(getMapping);
+        String mappingJsonString = getMapping.getResponseBodyAsString();
+        getMapping.releaseConnection();
+        return mappingJsonString;
     }
 
     private static void sendValueToDitto(String name, String type, PlcReadResponse response) {
