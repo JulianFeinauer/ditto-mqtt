@@ -358,3 +358,119 @@ takes time, and you may hit a connection limit at the PLC. So in a real world sc
 some kind of connection pool. A simple pool is provided by the PLC4X project as [connection-pool](https://github.com/apache/plc4x/tree/develop/plc4j/tools/connection-pool).
 
 ### The Backend - Ditto
+
+The final piece for our solution is a system that stores all values that we read from the devices and makes them accessible for other systems that want to use the data.
+In a real world use case there are many requirements like
+
+* security
+* fine grained access control
+* convenient APIs
+* allow partial updates (not always update all properties at once)
+
+// TODO Kevin: hast du noch ne Idee hier?
+
+[Eclipse Ditto](https://www.eclipse.org/ditto/) was built exactly for this use case and fulfills all requirements above easily.
+
+// TOOD bissl mehr über Ditto schreiben und warum das so geil ist
+
+In our example there are two things where ditto is involved.
+At start of the program we want to check if a device with the given `thingId` is already created in ditto or not.
+And if not, we create the device based on the information given from Vorto. In fact, we can use Vortos Ditto Plugin to generate the complete 
+message that will register the `thing` described by the Vorto model in Ditto.
+
+We create the thing using the HTTP API as we already get the payload from Vortos Ditto plugin by calling
+
+```
+String dittoJsonString = doHttpGet(client, String.format("https://vorto.eclipse.org/api/v1/generators/eclipseditto/models/%s.%s:%s?target=thingJson", namespace, modelName, modelVersion));
+```
+
+which gives us the following Ditto message in JSON format
+
+```
+{
+    "definition": "org.apache.plc4x.examples:VirtualMachineIM:1.0.0",
+    "attributes": {
+        "modelDisplayName": "VirtualMachine"
+    },
+    "features": {
+        "virtualmachine": {
+            "definition": [
+                "org.apache.plc4x.examples:VirtualMachine:1.0.0"
+            ],
+            "properties": {
+                "configuration": {
+                    "position": 0,
+                    "random": 0,
+                    "motorCurrent": 0,
+                    "processState": 0,
+                    "availability": false
+                }
+            }
+        }
+    }
+}
+```
+The only thing that we need to add to this JSON structure is a `thingId` key. Then we can send it to the respective `PUT` Endpoint 
+
+```
+PutMethod createTwin = new PutMethod("https://" + dittoEndpoint + "api/2/things/" + thingId);
+```
+
+which will either create the thing if it does not yet exist or does nothing if it already exists with the respective settings.
+
+As the device now exists in Ditto we can start to fetch data via PLC4X as described above and send the updated properties to Ditto. Ditto offers multiple ways of communication but in this example we use the websocket communication and rely on the [ditto-client](https://github.com/eclipse/ditto-clients) library that is provided
+and maintained by the Ditto team to have an easy DSL for communication with Ditto.
+
+In the code above the method `sendValueToDitto(dittoClient, thingId, name, type, response)` was called, so we will look a bit deeper into this method.
+PLC4X is pretty clever with its API so it provides a `getObject` method which returns the value in the right type but we need it typed for Ditto.
+But, we have the type information from Vorto so we can check and use PLC4Xs strongly typed getters, this is what this method does.
+The call `feature.putProperty` is polymorphic so it is important that the argument has the right Java type. 
+
+We use the method `feature.putProperty` which only changes the given path in the property and does not overwrite the complete feature.
+This is important as each property is fetched separately in the scheduled tasks and sent independently.
+
+```
+private static void sendValueToDitto(DittoClient dittoClient, String thingId, String name, String type, PlcReadResponse response) {
+    String propertyPath = "configuration/" + name;
+    // Fetch value from PLC4X Response
+    if ("DOUBLE".equals(type)) {
+        double value = response.getDouble(FIELD_NAME);
+        sendInternal(dittoClient, thingId, feature -> feature.putProperty(propertyPath, value));
+    } else if ("BOOLEAN".equals(type)) {
+        boolean value = response.getBoolean(FIELD_NAME);
+        sendInternal(dittoClient, thingId, feature -> feature.putProperty(propertyPath, value));
+    } else if ("INT".equals(type)) {
+        int value = response.getInteger(FIELD_NAME);
+        sendInternal(dittoClient, thingId, feature -> feature.putProperty(propertyPath, value));
+    } else {
+        throw new NotImplementedException("Currently type " + type + " is not implemented!");
+    }
+}
+```
+
+The final method we have to inspect is `sendInternal(DittoClient dittoClient, String thingId, Function<TwinFeatureHandle, CompletableFuture<Void>> setter)`, which is shown below.
+ 
+```
+private static <T> void sendInternal(DittoClient dittoClient, String thingId, Function<TwinFeatureHandle, CompletableFuture<Void>> setter) {
+    TwinFeatureHandle twinFeatureHandle = dittoClient.twin()
+        .forId(ThingId.of(thingId))
+        .forFeature("VirtualMachine".toLowerCase());
+    setter.apply(twinFeatureHandle)
+        .handle(new BiFunction<Void, Throwable, Object>() {
+            @Override
+            public Object apply(Void aVoid, Throwable throwable) {
+                if (throwable != null) {
+                    logger.info("Unable to send update to Ditto");
+                    logger.warn("Unable to send update to Ditto", throwable);
+                } else {
+                    logger.info("Sent update to Ditto!");
+                }
+                return null;
+            }
+        });
+}
+```
+
+It uses the `ditto-client` API to send the property update to Ditto asynchronously.
+
+// TODO how to get values from ditto?
